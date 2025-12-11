@@ -16,6 +16,8 @@ This repository serves as a practical resource for learning and practicing syste
 
 ## 🚀 Quick Start
 
+> **New here?** Check out the [Quick Reference Guide](QUICKSTART.md) for common commands and patterns!
+
 ### View Diagrams Instantly
 
 1. **Clone the repository**:
