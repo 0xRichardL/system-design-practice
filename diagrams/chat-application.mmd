@@ -1,0 +1,59 @@
+graph TB
+    subgraph Clients
+        Mobile[Mobile App]
+        Web[Web Browser]
+    end
+
+    subgraph "API Gateway"
+        Gateway[API Gateway]
+    end
+
+    subgraph "WebSocket Servers"
+        WS1[WebSocket Server 1]
+        WS2[WebSocket Server 2]
+        WS3[WebSocket Server 3]
+    end
+
+    subgraph "Message Queue"
+        MQ[Message Queue<br/>RabbitMQ/Kafka]
+    end
+
+    subgraph "Storage Layer"
+        MessageDB[(Message Store<br/>MongoDB)]
+        UserDB[(User DB<br/>PostgreSQL)]
+        Cache[(Redis Cache)]
+    end
+
+    subgraph "Notification Service"
+        Push[Push Notification<br/>Service]
+    end
+
+    Mobile -->|HTTPS/WSS| Gateway
+    Web -->|HTTPS/WSS| Gateway
+    
+    Gateway --> WS1
+    Gateway --> WS2
+    Gateway --> WS3
+    
+    WS1 --> MQ
+    WS2 --> MQ
+    WS3 --> MQ
+    
+    WS1 --> Cache
+    WS2 --> Cache
+    WS3 --> Cache
+    
+    MQ --> MessageDB
+    MQ --> Push
+    
+    WS1 --> UserDB
+    WS2 --> UserDB
+    WS3 --> UserDB
+    
+    MessageDB -.->|Backup| Cache
+
+    style Mobile fill:#e1f5ff
+    style Web fill:#e1f5ff
+    style Gateway fill:#fff4e1
+    style MQ fill:#ffe1e1
+    style Cache fill:#f0e1ff

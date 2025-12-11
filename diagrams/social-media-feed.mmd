@@ -1,0 +1,67 @@
+graph TB
+    subgraph Client
+        User[User/Client]
+    end
+
+    subgraph "CDN"
+        CDN[Content Delivery Network]
+    end
+
+    subgraph "Load Balancer"
+        LB[Load Balancer]
+    end
+
+    subgraph "API Servers"
+        API1[API Server 1]
+        API2[API Server 2]
+    end
+
+    subgraph "Feed Generation"
+        FeedGen[Feed Generator<br/>Service]
+    end
+
+    subgraph "Cache Layer"
+        FeedCache[(Feed Cache<br/>Redis)]
+        PostCache[(Post Cache<br/>Redis)]
+    end
+
+    subgraph "Database"
+        UserDB[(User DB)]
+        PostDB[(Post DB)]
+        GraphDB[(Social Graph<br/>Neo4j)]
+    end
+
+    subgraph "Storage"
+        Media[Media Storage<br/>S3]
+    end
+
+    User -->|Static Content| CDN
+    User -->|API Requests| LB
+    
+    LB --> API1
+    LB --> API2
+    
+    API1 --> FeedCache
+    API2 --> FeedCache
+    
+    API1 --> PostCache
+    API2 --> PostCache
+    
+    FeedGen -->|Generate Feed| FeedCache
+    FeedGen --> GraphDB
+    FeedGen --> PostDB
+    
+    API1 --> UserDB
+    API2 --> UserDB
+    
+    API1 --> PostDB
+    API2 --> PostDB
+    
+    CDN --> Media
+    PostDB -.->|Media URLs| Media
+
+    style User fill:#e1f5ff
+    style CDN fill:#fff4e1
+    style FeedCache fill:#ffe1e1
+    style PostCache fill:#ffe1e1
+    style Media fill:#e1ffe1

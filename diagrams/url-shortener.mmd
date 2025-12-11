@@ -1,0 +1,50 @@
+graph TB
+    subgraph Client
+        User[User/Browser]
+    end
+
+    subgraph "Load Balancer"
+        LB[Load Balancer]
+    end
+
+    subgraph "Application Servers"
+        API1[API Server 1]
+        API2[API Server 2]
+        API3[API Server 3]
+    end
+
+    subgraph "Cache Layer"
+        Redis[(Redis Cache)]
+    end
+
+    subgraph "Database Layer"
+        DB[(PostgreSQL<br/>URL Mappings)]
+    end
+
+    subgraph "Storage"
+        Analytics[(Analytics DB)]
+    end
+
+    User -->|1. Create Short URL| LB
+    User -->|2. Access Short URL| LB
+    LB --> API1
+    LB --> API2
+    LB --> API3
+    
+    API1 --> Redis
+    API2 --> Redis
+    API3 --> Redis
+    
+    API1 --> DB
+    API2 --> DB
+    API3 --> DB
+    
+    API1 -.->|Log Clicks| Analytics
+    API2 -.->|Log Clicks| Analytics
+    API3 -.->|Log Clicks| Analytics
+
+    style User fill:#e1f5ff
+    style LB fill:#fff4e1
+    style Redis fill:#ffe1e1
+    style DB fill:#e1ffe1
+    style Analytics fill:#f0e1ff

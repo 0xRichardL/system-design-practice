@@ -1,0 +1,22 @@
+{
+  "name": "system-design-practice",
+  "version": "1.0.0",
+  "description": "System design practice repository with MermaidJS diagrams",
+  "main": "index.js",
+  "scripts": {
+    "serve": "npx http-server -p 8080",
+    "validate": "node validate-diagrams.js",
+    "test": "npm run validate"
+  },
+  "keywords": [
+    "system-design",
+    "mermaid",
+    "diagrams",
+    "architecture"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "mermaid": "^11.12.2"
+  }
+}
