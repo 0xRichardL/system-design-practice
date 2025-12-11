@@ -15,7 +15,12 @@ function validateMermaidFile(filePath) {
     const errors = [];
     
     // Check if file starts with a valid diagram type
-    const validTypes = ['graph', 'flowchart', 'sequenceDiagram', 'classDiagram', 'stateDiagram', 'erDiagram', 'journey', 'gantt'];
+    const validTypes = [
+        'graph', 'flowchart', 'sequenceDiagram', 'classDiagram', 
+        'stateDiagram', 'erDiagram', 'journey', 'gantt', 'pie',
+        'gitGraph', 'requirementDiagram', 'C4Context', 'mindmap',
+        'timeline', 'zenuml', 'sankey-beta'
+    ];
     const firstLine = content.trim().split('\n')[0];
     
     const hasValidType = validTypes.some(type => firstLine.startsWith(type));
@@ -23,11 +28,15 @@ function validateMermaidFile(filePath) {
         errors.push('File does not start with a valid Mermaid diagram type');
     }
     
-    // Check for common syntax issues
-    if (content.includes('-->') || content.includes('---')) {
-        // Valid connection syntax
-    } else {
-        errors.push('Warning: No connections found in diagram');
+    // Check for common connection syntax (only warn if graph/flowchart type)
+    const isGraphType = firstLine.startsWith('graph') || firstLine.startsWith('flowchart');
+    if (isGraphType) {
+        // Check for various Mermaid connection types
+        const connectionPattern = /-{2,3}>|={2,3}>|\.-+>|~{3,}/;
+        const hasConnections = connectionPattern.test(content);
+        if (!hasConnections) {
+            errors.push('Warning: No connections found in graph diagram');
+        }
     }
     
     return errors;
