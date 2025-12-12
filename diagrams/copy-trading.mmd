@@ -1,0 +1,22 @@
+flowchart LR
+    %% Signal flow
+    HLWS("Hyperliquid WS") --> MEL["Master Event Listener - reconstruct state - normalize event"]
+    MEL --> RMQ_EventEx(["RabbitMQ event.master.exchange"])
+    %% Following flow
+    Follower("Follower") --> CEM["Copy Engine Management"]
+    CEM --> RMQ_FollowEx(["RabbitMQ subscription.exchange"])
+    RMQ_FollowEx --> QFS001
+    RMQ_EventEx --> QEM001 & QEM002 & QEM003
+    %% Engine shard
+    subgraph Shard01["Shard Worker 01"]
+        CE01["Copy Engine"]
+        QEM001(["event.master.001"])
+        QEM002(["event.master.002"])
+        QEM003(["event.master.003"])
+        QFS001(["subscription.shard_01"])
+        QEM001 --> CE01
+        QEM002 --> CE01
+        QEM003 --> CE01
+        QFS001 --> CE01
+    end
+    CE01 --> HEVM("HyperEVM")
