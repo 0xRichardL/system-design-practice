@@ -1,0 +1,56 @@
+flowchart LR
+
+%% Write flow:
+USER((User))
+FINANCE_API_W["Finance API (W)"]
+TX_DB[("Transactions DB")]
+BUS_TYPE_EXCHANGE{"type.exchange"}
+
+USER -->|initiate transfer| FINANCE_API_W
+FINANCE_API_W -->|validate idempotency| TX_DB
+FINANCE_API_W ---> BUS_TYPE_EXCHANGE
+BUS_TYPE_EXCHANGE --> BUS_QUEUE_SINGLE_SHARD & BUS_QUEUE_MULTI_SHARD
+
+%% Local shard transfers:
+BUS_QUEUE_SINGLE_SHARD([tx.single-shard])
+subgraph SINGLE_SHARD_PROCESSING["Single-shard Transfer Processing"]
+  SSP_TX_SERVICE["Transaction Service"]
+  SSP_LEDGER[("Ledger table")]
+  SSP_BALANCE[("Balance table")]
+  SSP_OUTBOX[("Outbox table")]
+end
+
+BUS_QUEUE_SINGLE_SHARD --> SSP_TX_SERVICE
+SSP_TX_SERVICE -->|atomic| SSP_LEDGER & SSP_BALANCE & SSP_OUTBOX
+
+%% Multi-shard transfers:
+BUS_QUEUE_MULTI_SHARD([tx.multi-shard])
+subgraph MULTI_SHARD_PROCESSING["Multi-shard Transfer Processing"]
+  MSP_COORDINATOR["Transaction Coordinator"]
+  MSP_DEBIT_SHARD["Debit Shard"]
+  MSP_CREDIT_SHARD["Credit Shard"]
+end
+
+BUS_QUEUE_MULTI_SHARD --> MSP_COORDINATOR
+MSP_COORDINATOR -->|"debit.requested"| MSP_DEBIT_SHARD
+MSP_DEBIT_SHARD -->|"debit.committed"| MSP_COORDINATOR
+MSP_DEBIT_SHARD -->|"debit.rejected"| MSP_COORDINATOR
+
+
+MSP_COORDINATOR -->|"credit.requested"| MSP_CREDIT_SHARD
+MSP_CREDIT_SHARD -->|"credit.committed"| MSP_COORDINATOR
+MSP_COORDINATOR -->|"credit.compensate"| MSP_CREDIT_SHARD
+
+
+%% Read flow:
+FINANCE_API_R["Finance API (R)"]
+BALANCE_DB[("Balance DB (R)")]
+BUS_BALANCE_UPDATE(["balance.update"])
+BALANCE_UPDATER_SERVICE["Balance Updater Service"]
+
+MSP_DEBIT_SHARD & MSP_CREDIT_SHARD & SSP_OUTBOX --> BUS_BALANCE_UPDATE
+BUS_BALANCE_UPDATE --> BALANCE_UPDATER_SERVICE
+SSP_BALANCE -->|read| BALANCE_UPDATER_SERVICE
+BALANCE_UPDATER_SERVICE -->|update| BALANCE_DB
+USER -->|get balance| FINANCE_API_R
+FINANCE_API_R --------->|read| BALANCE_DB
