@@ -1,0 +1,46 @@
+flowchart TB
+
+%% Subscription flow:
+FL((Follower))
+SUB_SER[Subscription service]
+SUB_DB[("Subscriptions</br>DB")]
+
+FL -->|"subscribe(master.1)"| SUB_SER
+SUB_SER --> SUB_DB
+SUB_DB -->|sync| CES_SUB_DB
+
+%% Copy engine sharding:
+subgraph COPY_ENGINE_SHARD["Shard by group of masters"]
+    CES_SUB_DB[("Sharded</br>Subscriptions</br>DB")]
+    CES_QUEUE_1([event.master.1])
+    CES_QUEUE_2([event.master.2])
+    CES_COPY_ENGINE["Copy Engine"]
+
+    CES_SUB_DB --> CES_COPY_ENGINE
+    CES_QUEUE_1 --> CES_COPY_ENGINE
+    CES_QUEUE_2 --> CES_COPY_ENGINE
+end
+
+%% Master event listener:
+subgraph MASTER_EVENT_LISTENER["Master Event Listener"]
+    MEL_PROXY_1(["Proxy (IP 1)"])
+    MEL_PROXY_2(["Proxy (IP 2)"])
+    MEL_LISTENER["Event Listener"]
+
+    MEL_PROXY_1 --> MEL_LISTENER
+    MEL_PROXY_2 --> MEL_LISTENER
+end
+
+%% Message bus:
+MASTER_EVENT_EXCHANGE{"Master Event Exchange"}
+MEL_LISTENER --> MASTER_EVENT_EXCHANGE
+MASTER_EVENT_EXCHANGE --> CES_QUEUE_1
+MASTER_EVENT_EXCHANGE --> CES_QUEUE_2
+
+%% Externals:
+HYPERLIQUID_WS["HyperLiquid</br>WebSocket API"]
+    %% MASTER_EVENT_LISTENER:
+    HYPERLIQUID_WS --> MEL_PROXY_1
+    HYPERLIQUID_WS --> MEL_PROXY_2
+HYPERLIQUID_REST["HyperLiquid</br>REST API"]
+CES_COPY_ENGINE --> HYPERLIQUID_REST
