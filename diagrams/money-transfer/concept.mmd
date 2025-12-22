@@ -12,7 +12,7 @@ FINANCE_API_W ---> BUS_TYPE_EXCHANGE
 BUS_TYPE_EXCHANGE --> BUS_QUEUE_SINGLE_SHARD & BUS_QUEUE_MULTI_SHARD
 
 %% Local shard transfers:
-BUS_QUEUE_SINGLE_SHARD([tx.single-shard])
+BUS_QUEUE_SINGLE_SHARD[/tx.single-shard/]
 subgraph SINGLE_SHARD_PROCESSING["Single-shard Transfer Processing"]
   SSP_TX_SERVICE["Transaction Service"]
   SSP_LEDGER[("Ledger table")]
@@ -24,7 +24,7 @@ BUS_QUEUE_SINGLE_SHARD --> SSP_TX_SERVICE
 SSP_TX_SERVICE -->|atomic| SSP_LEDGER & SSP_BALANCE & SSP_OUTBOX
 
 %% Multi-shard transfers:
-BUS_QUEUE_MULTI_SHARD([tx.multi-shard])
+BUS_QUEUE_MULTI_SHARD[/tx.multi-shard/]
 subgraph MULTI_SHARD_PROCESSING["Multi-shard Transfer Processing"]
   MSP_COORDINATOR["Transaction Coordinator"]
   MSP_DEBIT_SHARD["Debit Shard"]
@@ -45,7 +45,7 @@ MSP_COORDINATOR -->|"credit.compensate"| MSP_CREDIT_SHARD
 %% Read flow:
 FINANCE_API_R["Finance API (R)"]
 BALANCE_DB[("Balance DB (R)")]
-BUS_BALANCE_UPDATE(["balance.update"])
+BUS_BALANCE_UPDATE[/"balance.update"/]
 BALANCE_UPDATER_SERVICE["Balance Updater Service"]
 
 MSP_DEBIT_SHARD & MSP_CREDIT_SHARD & SSP_OUTBOX --> BUS_BALANCE_UPDATE

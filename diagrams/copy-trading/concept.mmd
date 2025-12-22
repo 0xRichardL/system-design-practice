@@ -12,8 +12,8 @@ SUB_DB -->|sync| CES_SUB_DB
 %% Copy engine sharding:
 subgraph COPY_ENGINE_SHARD["Shard by group of masters"]
     CES_SUB_DB[("Sharded</br>Subscriptions</br>DB")]
-    CES_QUEUE_1([event.master.1])
-    CES_QUEUE_2([event.master.2])
+    CES_QUEUE_1[/event.master.1/]
+    CES_QUEUE_2[/event.master.2/]
     CES_COPY_ENGINE["Copy Engine"]
 
     CES_SUB_DB --> CES_COPY_ENGINE
@@ -23,8 +23,8 @@ end
 
 %% Master event listener:
 subgraph MASTER_EVENT_LISTENER["Master Event Listener"]
-    MEL_PROXY_1(["Proxy (IP 1)"])
-    MEL_PROXY_2(["Proxy (IP 2)"])
+    MEL_PROXY_1["Proxy (IP 1)"]
+    MEL_PROXY_2["Proxy (IP 2)"]
     MEL_LISTENER["Event Listener"]
 
     MEL_PROXY_1 --> MEL_LISTENER
