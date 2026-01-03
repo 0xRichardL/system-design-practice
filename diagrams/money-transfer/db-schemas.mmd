@@ -1,0 +1,56 @@
+erDiagram
+  TRANSACTIONS {
+    tx_id UUID      PK    "Global transaction ID.
+                          Used by all components"
+    idempotency_key TEXT  "Client-side generated key,
+                          usually UUID"
+    client_id   TEXT
+    from_user   UUID
+    to_user     UUID
+    amount      BIGINT
+    status      TEXT
+    created_at  TIMESTAMP
+    %% Constraints:
+    uk_client_id_idempotency_key UNIQUE_CONSTRAINT "(client_id,idempotency_key)"
+  }
+
+  LEDGER_ENTRIES {
+    ledger_id BIGSERIAL PK
+    %% identity
+    account_id UUID     FK
+    shard_id   INT          "For re-sharding purposes"
+    %% money
+    amount    BIGINT  "With sign:
+                      + for credit,
+                      - for debit"
+    currency  CHAR(3)
+    %% linkage
+    global_tx_id  UUID  UK "TRANSACTIONS.tx_id"
+    local_tx_id   UUID
+    %% classification
+    entry_type  TEXT  UK  "CREDIT or DEBIT"
+    reason      TEXT      "Business related:
+                          TRANSFER, CASH_IN,
+                          CASH_OUT, FEE, etc."
+    %% ordering & audit
+    sequence_no BIGINT
+    created_at  TIMESTAMP "Enforces per-account ordering.
+                          Enables consistent balance rebuild
+                          Prevents race conditions"
+    %% Constraints:
+    uk_global_tx_id_entry_type  UNIQUE_CONSTRAINT "(global_tx_id,entry_type)
+                                                  ledger-level idempotency"
+  } 
+
+  BALANCES {
+    account_id UUID      PK
+    shard_id   INT          "For re-sharding purposes"
+    currency   CHAR(3)   PK
+    balance    BIGINT
+    updated_at TIMESTAMP
+    version    BIGINT       "Optimistic locking"
+  }
+
+  OUTBOX_MESSAGES {
+    %% TODO: define schema
+  }
