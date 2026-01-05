@@ -1,4 +1,5 @@
 erDiagram
+
   TRANSACTIONS {
     tx_id UUID      PK    "Global transaction ID.
                           Used by all components"
@@ -8,10 +9,14 @@ erDiagram
     from_user   UUID
     to_user     UUID
     amount      BIGINT
-    status      TEXT
+    status      TIMESTAMP
     created_at  TIMESTAMP
     %% Constraints:
     uk_client_id_idempotency_key UNIQUE_CONSTRAINT "(client_id,idempotency_key)"
+  }
+  
+  ACCOUNTS {
+    account_id  UUID  PK
   }
 
   LEDGER_ENTRIES {
@@ -25,11 +30,11 @@ erDiagram
                       - for debit"
     currency  CHAR(3)
     %% linkage
-    global_tx_id  UUID  UK "TRANSACTIONS.tx_id"
+    global_tx_id  UUID  "TRANSACTIONS.tx_id"
     local_tx_id   UUID
     %% classification
-    entry_type  TEXT  UK  "CREDIT or DEBIT"
-    reason      TEXT      "Business related:
+    entry_type  TIMESTAMP "CREDIT or DEBIT"
+    reason      ENUM      "Business related:
                           TRANSFER, CASH_IN,
                           CASH_OUT, FEE, etc."
     %% ordering & audit
@@ -40,17 +45,38 @@ erDiagram
     %% Constraints:
     uk_global_tx_id_entry_type  UNIQUE_CONSTRAINT "(global_tx_id,entry_type)
                                                   ledger-level idempotency"
-  } 
+  }
 
   BALANCES {
-    account_id UUID      PK
+    account_id UUID      FK
     shard_id   INT          "For re-sharding purposes"
-    currency   CHAR(3)   PK
+    currency   CHAR(3)
     balance    BIGINT
     updated_at TIMESTAMP
     version    BIGINT       "Optimistic locking"
+    %% Constraints:
+    pk_account_id_currency PRIMARY_KEY  "(account_id,currency)"
   }
 
   OUTBOX_MESSAGES {
-    %% TODO: define schema
+    %% Identities:
+    event_id        UUID  PK
+    aggregated_type ENUM      "ledger, balance, transaction"
+    aggregated_id   UUID      "account_id; global_tx_id"
+    %% event data:
+    event_type  ENUM  "debit.committed, credit.committed"
+    payload     JSON  "full event body"
+
+    shard_id    INT       "For re-sharding purposes"
+
+    status      ENUM  "NEW, SENT, FAILED"
+    retry_count INT   "Default: 0"
+
+    created_at    TIMESTAMP
+    published_at  TIMESTAMP
+    %% Constraints:
+    uk_event_type_aggregate_id UNIQUE_CONSTRAINT "(event_type, aggregate_id)"
   }
+
+  ACCOUNTS ||--o{ LEDGER_ENTRIES : "has"
+  ACCOUNTS ||--o{ BALANCES : "has"
