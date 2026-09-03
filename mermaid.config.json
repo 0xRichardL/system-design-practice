@@ -1,0 +1,7 @@
+{
+  "theme": "default",
+  "look": "classic",
+  "deterministicIds": true,
+  "deterministicIDSeed": "system-design-practice",
+  "handDrawnSeed": 1
+}

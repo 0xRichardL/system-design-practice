@@ -1,46 +1,87 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Script to render a single Mermaid diagram file (.mmd) to SVG format
-# Uses @mermaid-js/mermaid-cli (mmdc command)
-# Usage: ./render.sh <path-to-mmd-file>
+set -euo pipefail
 
-set -e  # Exit on error
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CONFIG_FILE="$ROOT_DIR/mermaid.config.json"
 
-# Colors for output
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m' # No Color
+usage() {
+  echo "Usage: $0 <path-to-mmd-file>" >&2
+}
 
-# Check if file argument is provided
-if [ -z "$1" ]; then
-    echo -e "${RED}Error: Please provide a .mmd file to render${NC}"
-    echo "Usage: $0 <path-to-mmd-file>"
-    exit 1
+sha256_file() {
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$1" | awk '{print $1}'
+  elif command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$1" | awk '{print $1}'
+  else
+    echo "Error: shasum or sha256sum is required" >&2
+    return 1
+  fi
+}
+
+if [ "$#" -ne 1 ]; then
+  usage
+  exit 1
 fi
 
-MMD_FILE="$1"
+SOURCE_FILE="$1"
 
-# Check if file exists
-if [ ! -f "$MMD_FILE" ]; then
-    echo -e "${RED}Error: File not found: $MMD_FILE${NC}"
-    exit 1
+if [ ! -f "$SOURCE_FILE" ]; then
+  echo "Error: Mermaid source not found: $SOURCE_FILE" >&2
+  exit 1
 fi
 
-# Check if file has .mmd extension
-if [[ ! "$MMD_FILE" =~ \.mmd$ ]]; then
-    echo -e "${RED}Error: File must have .mmd extension${NC}"
-    exit 1
+if [[ "$SOURCE_FILE" != *.mmd ]]; then
+  echo "Error: source must have a .mmd extension: $SOURCE_FILE" >&2
+  exit 1
 fi
 
-# Get the output SVG filename
-SVG_FILE="${MMD_FILE%.mmd}.svg"
+SOURCE_DIR="$(cd "$(dirname "$SOURCE_FILE")" && pwd)"
+SOURCE_FILE="$SOURCE_DIR/$(basename "$SOURCE_FILE")"
 
-echo -e "Rendering: ${GREEN}$MMD_FILE${NC}"
-
-# Run mmdc command to render the diagram
-if mmdc -i "$MMD_FILE" -o "$SVG_FILE" 2>&1; then
-    echo -e "${GREEN}✓ Generated: $SVG_FILE${NC}"
-else
-    echo -e "${RED}✗ Failed to render diagram${NC}"
-    exit 1
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "Error: Mermaid configuration not found: $CONFIG_FILE" >&2
+  exit 1
 fi
+
+if [ ! -x "$ROOT_DIR/node_modules/.bin/mmdc" ]; then
+  echo "Error: local Mermaid CLI is not installed; run 'make setup'" >&2
+  exit 1
+fi
+
+EXPECTED_VERSION="$(node -p "require('$ROOT_DIR/package.json').devDependencies['@mermaid-js/mermaid-cli']")"
+ACTUAL_VERSION="$(cd "$ROOT_DIR" && npx --no-install mmdc --version)"
+
+if [ "$ACTUAL_VERSION" != "$EXPECTED_VERSION" ]; then
+  echo "Error: Mermaid CLI version $ACTUAL_VERSION does not match pinned version $EXPECTED_VERSION" >&2
+  exit 1
+fi
+
+OUTPUT_FILE="${SOURCE_FILE%.mmd}.svg"
+SOURCE_NAME="$(basename "$SOURCE_FILE")"
+SOURCE_HASH="$(sha256_file "$SOURCE_FILE")"
+CONFIG_HASH="$(sha256_file "$CONFIG_FILE")"
+TEMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/system-design-render.XXXXXX")"
+TEMP_SVG="$TEMP_DIR/output.svg"
+
+cleanup() {
+  rm -rf "$TEMP_DIR"
+}
+trap cleanup EXIT
+
+cd "$ROOT_DIR"
+npx --no-install mmdc \
+  --quiet \
+  --configFile "$CONFIG_FILE" \
+  --input "$SOURCE_FILE" \
+  --output "$TEMP_SVG"
+
+{
+  printf '<!-- generated-by=scripts/render.sh source=%s source-sha256=%s config-sha256=%s mermaid-cli=%s -->\n' \
+    "$SOURCE_NAME" "$SOURCE_HASH" "$CONFIG_HASH" "$ACTUAL_VERSION"
+  cat "$TEMP_SVG"
+  printf '\n'
+} > "$OUTPUT_FILE"
+
+echo "Generated $OUTPUT_FILE"

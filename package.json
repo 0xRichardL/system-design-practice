@@ -1,0 +1,19 @@
+{
+  "name": "system-design-practice",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A deep pattern lab for learning and reviewing system design.",
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "setup": "./scripts/setup.sh",
+    "render": "./scripts/render.sh",
+    "render:all": "./scripts/render-all.sh",
+    "check": "./scripts/check.sh"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "11.16.0",
+    "puppeteer": "25.9.0"
+  }
+}

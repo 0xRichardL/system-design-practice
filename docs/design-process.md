@@ -1,6 +1,6 @@
-# The Correct System Design Process (7 Phases)
+# System Design Process: Phase 0 + 7 Phases
 
-This is the canonical loop. Every serious system design follows it, consciously or not.
+Phase 0 establishes the system boundary. The seven design phases that follow form a practical, repeatable learning loop.
 
 ## Phase 0 — Define the System Boundary
 
@@ -115,24 +115,25 @@ _Example:_
 
 > If you start with microservices before data: ❌ You’re guessing
 
-## Phase 4 — Choose Consistency Model Explicitly
+## Phase 4 — Choose Consistency Guarantees Explicitly
 
 This is where 90% of confusion comes from.
 
-You must decide consistency model per operation:
+Decide the required guarantee per operation. "Strong consistency" is an umbrella term; name the specific guarantee when possible.
 
-| Consistency Model         | Description                                                                                  | When to Use                                |
-| ------------------------- | -------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| Strong Consistency        | All nodes see the same data at the same time.<br>Lower availability, higher latency.         | Critical invariants (e.g., balance checks) |
-| Eventual/weak Consistency | Updates will propagate to all nodes eventually.<br>Higher availability, potential conflicts. | Non-critical data (e.g., user profiles)    |
-| Causal Consistency        | A user always sees their own updates immediately.                                            | User-specific data (e.g., shopping carts)  |
-| Session Consistency       | Once a user reads data, they will not see older data.                                        | Session data (e.g., browsing history)      |
+| Guarantee | Description | When to Use |
+| --------- | ----------- | ----------- |
+| Linearizability | Each operation appears atomic and respects real-time ordering. | A read must observe the latest completed write. |
+| Serializability | Concurrent transactions have an outcome equivalent to some serial execution. | Transactions must preserve multi-item invariants. |
+| Causal consistency | Causally related operations are observed in causal order. | Users must observe effects after their causes. |
+| Eventual consistency | Replicas converge when updates stop; intermediate reads may be stale. | Temporary staleness is acceptable. |
+| Session guarantees | Guarantees such as read-your-writes and monotonic reads apply within a client session. | A user should not lose sight of their own updates. |
 
 _Example:_
 
 | Operation       | Consistency Model    |
 | --------------- | -------------------- |
-| Debit operation | Strong Consistency   |
+| Debit operation | Serializable transaction |
 | View balance    | Eventual Consistency |
 | Analytics       | Eventual Consistency |
 
@@ -203,3 +204,9 @@ The patterns jump in to solve consistency problems:
 **Bad design:**
 
 - Works "until it doesn’t"
+
+## References
+
+- [Linearizability: A Correctness Condition for Concurrent Objects](https://doi.org/10.1145/78969.78972)
+- [PostgreSQL: Transaction Isolation](https://www.postgresql.org/docs/current/transaction-iso.html)
+- [Amazon Dynamo: Highly Available Key-value Store](https://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf)

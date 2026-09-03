@@ -58,7 +58,7 @@ mindmap
         wal_retention["WAL retention"]
         indexes["Indexes"]
         mvcc_bloat["MVCC & bloat"]
-      additional_storage("Addition storage")
+      additional_storage("Additional storage")
         wal_archives["WAL archives"]
         replicas["Replicas"]
         backups["Backups"]
@@ -69,30 +69,30 @@ mindmap
 
     latency_slo{{"5. Latency SLO"}}
       percentiles("Percentiles")
-        p50["p50 Median"]
-        p95["p95 95% faster or equal than"]
-        p99["p99 99% faster or equal than"]
+        p50["p50 — 50% complete at or below this latency"]
+        p95["p95 — 95% complete at or below this latency"]
+        p99["p99 — 99% complete at or below this latency"]
       tail_latency("Tail latency")
         retries["Retries"]
         lock_contention["Lock contention"]
         connection_pool_waits["Connection-pool waits"]
-        gcc_lag["GCC lag"]
+        gc_lag["GC lag"]
         downstream_latency["Downstream latency"]
         queueing_latency["Queueing"]
 
     reliability{{"6. Reliability"}}
       availability("Availability")
         availability_question["Can the service be used now?"]
-        one_nine["90% (one-nine) — Downtime: 72h; 36.5d"]
-        two_nines["99% (two-nines) — Downtime: 7.2h; 3.65d"]
-        three_nines["99.9% (three-nines) — Downtime: 43.8m; 8.76h"]
-        four_nines["99.99% (four-nines) — Downtime: 4.32m; 52.56m"]
-        five_nines["99.999% (five-nines) — Downtime: 25.9s; 6.05s"]
+        one_nine["90% (one-nine) — Monthly: 72h; yearly: 36.5d"]
+        two_nines["99% (two-nines) — Monthly: 7.2h; yearly: 3.65d"]
+        three_nines["99.9% (three-nines) — Monthly: 43.8m; yearly: 8.76h"]
+        four_nines["99.99% (four-nines) — Monthly: 4.32m; yearly: 52.56m"]
+        five_nines["99.999% (five-nines) — Monthly: 25.9s; yearly: 5m 15s"]
       rpo("RPO")
         rpo_name["Recovery Point Objective"]
         rpo_definition["Maximum acceptable data loss"]
         rpo_question["How much data can we lose?"]
-        rpo_classes["Typical calsses"]
+        rpo_classes["Typical classes"]
           near_zero_loss["Near-zero loss"]
           rpo_seconds["Seconds"]
           minutes_or_more["Minutes or more"]
@@ -100,7 +100,7 @@ mindmap
         rto_name["Recovery Time Objective"]
         rto_definition["Maximum acceptable recovery time"]
         rto_question["How long can the system remain unavailable?"]
-        rto_classes["Typical calsses"]
+        rto_classes["Typical classes"]
           rto_seconds["Seconds"]
           rto_minutes["Minutes"]
           rto_hours["Hours"]
@@ -115,7 +115,7 @@ mindmap
         consistency_question["What state can be observed?"]
         state_characteristics["State characteristics"]
           durable_state["Durable state"]
-          ephemeral_state["Ephermal state"]
+          ephemeral_state["Ephemeral state"]
           reconstructable_state["Reconstructable state"]
         consistency_models["Consistency models"]
           strong_consistency["Strong Consistency"]
