@@ -12,11 +12,11 @@ Design a notification service supporting email, push, and SMS.
 
 - User: Receives app notifications through email, push, or SMS.
 - Core operation:
-  - Notification service receives a notification event from internal topic and routes the message to the correct provider & user.
+  - Notification service receives a notification event from internal topic and routes the message to the correct channel & user.
   - Push notification: Fast delivery to the user device, eventually consistent.
   - Email: Delivered to the user mailbox, high consistent.
   - SMS: Delivered to the user device, high consistent.
-  - Orchestrate message to notification providers: Email, SMS, app push
+  - Orchestrate message delivery through the Email, SMS, and app push channels.
 - Single region, no global distribution.
 - Asynchronous processing, no synchronous API.
 
@@ -32,9 +32,9 @@ Design a notification service supporting email, push, and SMS.
 
 ### Functional
 
-- Internal service creates a notification event with target provider and target users.
-- Notification service routes the message to the correct provider & user.
-- Validate the inputs based on the provider.
+- Internal service creates a notification event with target channel and target users.
+- Notification service routes the message to the correct channel & user.
+- Validate the inputs based on the channel.
 - For Email, fill in the template data through external.
 
 ### Non-functional
@@ -54,7 +54,7 @@ Design a notification service supporting email, push, and SMS.
 - Only internal services can reach the notification service.
 - Producers are internal services and can call to Notification service synchronously through internal API.
 - Provider delivery is asynchronous by the Notification system.
-- One request exactly target one user and one provider.
+- One request exactly target one user and one channel.
 - Producers may retry after timeout, the system has a method to ensure the idempotency.
 - Email, SMS, Push are delivery through external providers.
 - Provider has independent quota, latency, availability, and retry behavior.
@@ -73,7 +73,7 @@ Design a notification service supporting email, push, and SMS.
 Each notification targets exactly:
 
 - One user.
-- One provider: email, SMS, or push.
+- One channel: email, SMS, or push.
 - One destination.
 - No bulk notifications or multi-channel fan-out.
 
@@ -95,9 +95,9 @@ Assume the distribution remains approximately the same during peak periods.
 - A producer may retry an event, so approximately 2% of incoming events are duplicates.
 - Approximately 5% of provider requests require at least one retry.
 
-### Provider behavior
+### External provider behavior
 
-| Provider | Average API latency | Account quota |
+| Channel | Average API latency | Account quota |
 | --- | ---: | ---: |
 | Push | 100 ms | 10,000 requests/s |
 | Email | 300 ms | 2,500 requests/s |
@@ -202,8 +202,8 @@ With index overhead = 7.5GB * 1.3 = 9.75GB
 ## Core Invariants
 
 - One event target to exact one user.
-- One event target to exact one provider.
-- The worker must not change the notification data, user or provider.
+- One event target to exact one channel.
+- The worker must not change the notification data, user or channel.
 - Invalid event must never reach the provider.
 - The notification service returns `202 Accepted` only after notification and dispatch intent are durably stored.
 - A producer and an idempotency key identify at most one logical notification.
@@ -230,7 +230,7 @@ The Notification service accepts a notification when:
 The Worker service processes an event when:
 
 1. The event is routed to the correct queue which is bind to the worker.
-2. The event `Provider` matched the worker.
+2. The event `Channel` matched the worker.
 3. The event `RetryCount` must not exceed the service retry setting.
 4. The notification status is not `ProviderAccepted`, `Sent`, or `Failed`.
 5. The `NextRetryAt` is passed the current.
@@ -242,7 +242,7 @@ type Notification struct {
     ID          string // Primary Key, system generated
     IdemKey     string
     Producer    string
-    Provider    string // Email, SMS, Push
+    Channel     string // Email, SMS, Push
     UserID      string
     TemplateID  string
     Data        map[string]string
@@ -269,6 +269,7 @@ type Outbox struct {
 ```mermaid
 flowchart LR
     Producers[Internal services] --> NS[Notification system]
+    SO[System Observer] --> NS
     NS --> Email[Email provider]
     NS --> SMS[SMS provider]
     NS --> Push[Push provider]
@@ -347,17 +348,54 @@ flowchart LR
     RELAY -->|Enqueue| BROKER
 ```
 
+### 4. Metric observation flow
+
+#### 4.1 High level
+
+```mermaid
+flowchart LR
+    
+    NOTIF[Notification service]
+    RELAY[Outbox Relay]
+    BROKER[Message Broker]
+    WORKER[Push, Email SMS worker]
+    CLT[Otel Collector]
+    PROM[Prometheus]
+    GRAF[Grafana]
+
+    NOTIF & RELAY & WORKER -.->|Metrics| CLT
+    PROM -->|Scrape| CLT & BROKER
+    GRAF -->|Query| PROM
+```
+
+#### 4.1 Notification delivery duration
+
+Metric details:
+
+- Start: notification accepted
+- End: provider accepted or permanently failed
+- Processing time: Current time - `notification.createdAt`
+- Producer: `notification.Producer`
+- Channel: `notification.Channel`
+- Outcome: Enum `accepted`, `failed`, `expired`
+  - `expired`: When Status is failed with exceeding retry limit.
+
+Output observations:
+
+- SLO: p95, p99
+- Success rate
+
 ## Consistency and Transactions
 
 - IdemKey: Idempotent key, generated by the producer.
 - Idempotency constraint: `UNIQUE(IdemKey + Producer)`
-- Notification table unique constraint: IdemKey + Producer + Provider + UserID.
+- Notification table unique constraint: IdemKey + Producer + Channel + UserID.
 
 ## Failure Handling
 
 - Retry policy:
 
-    | Provider | Type | Config |
+    | Channel | Type | Config |
     | -------- | ---- | ------ |
     | Email, SMS | Exponential backoff | base 2s; jitter 200ms; max 6 |
     | Push | Linear backoff | 1s; max 5 |
